@@ -687,7 +687,7 @@ async function boot(){
     const app=A.initializeApp(cfg), auth=U.getAuth(app); let db;
     try{ db=F.initializeFirestore(app,{localCache:F.persistentLocalCache({tabManager:F.persistentMultipleTabManager()})}); }catch(e){ db=F.getFirestore(app); }
     fb={ signIn:(e,p)=>U.signInWithEmailAndPassword(auth,e,p), signOut:()=>U.signOut(auth), reset:e=>U.sendPasswordResetEmail(auth,e),
-      listen:(c,next,err)=>F.onSnapshot(F.collection(db,c),next,err), set:(c,id,data)=>F.setDoc(F.doc(db,c,id),data), del:(c,id)=>F.deleteDoc(F.doc(db,c,id)) };
+      listen:(c,next,err)=>F.onSnapshot(F.collection(db,c),{includeMetadataChanges:true},next,err), set:(c,id,data)=>F.setDoc(F.doc(db,c,id),data), del:(c,id)=>F.deleteDoc(F.doc(db,c,id)) };
     U.onAuthStateChanged(auth,u=>{
       if(S.unsubs){ S.unsubs.forEach(f=>{ try{ f(); }catch(e){} }); S.unsubs=null; }
       S.visits=new Map(); S.issues=new Map(); S.people=new Map(); S.loaded={visits:false,issues:false}; S.peopleLoaded=false; S.denied=false;
