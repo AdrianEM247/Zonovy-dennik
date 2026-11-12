@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Zónový denník">
+<title>Zónový denník</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@600;700&display=swap">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{-webkit-text-size-adjust:100%} body{margin:0} img{max-width:100%} [hidden]{display:none!important}
+
+/* Layout: phone-first single column; bottom tab bar on phones, tabs move into the header from 900px; forms open as a bottom sheet (centered dialog on wide screens). */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface-2:#E9EEF2; --ink:#15212C; --muted:#586675; --line:#D8DFE6;
+  --accent:#0B6A76; --accent-ink:#FFFFFF; --accent-soft:#DDEFF1;
+  --ok:#23734A; --ok-soft:#DDF0E5; --warn:#8F5E0C; --warn-soft:#F8EBCD; --crit:#B23427; --crit-soft:#F9DFDB;
+  --scrim:rgba(14,22,30,.48); --shadow:0 10px 30px rgba(16,28,40,.16);
+  --font-display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
+  --font-body:"Barlow","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0F151B; --surface:#18212A; --surface-2:#212C37; --ink:#E7EDF3; --muted:#94A3B3; --line:#2B3744;
+  --accent:#56BBC8; --accent-ink:#06262B; --accent-soft:#143A40;
+  --ok:#63C48D; --ok-soft:#163626; --warn:#E3B457; --warn-soft:#3B2E10; --crit:#F2877A; --crit-soft:#431D18;
+  --scrim:rgba(0,0,0,.6); --shadow:0 10px 30px rgba(0,0,0,.5); color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0F151B; --surface:#18212A; --surface-2:#212C37; --ink:#E7EDF3; --muted:#94A3B3; --line:#2B3744;
+  --accent:#56BBC8; --accent-ink:#06262B; --accent-soft:#143A40;
+  --ok:#63C48D; --ok-soft:#163626; --warn:#E3B457; --warn-soft:#3B2E10; --crit:#F2877A; --crit-soft:#431D18;
+  --scrim:rgba(0,0,0,.6); --shadow:0 10px 30px rgba(0,0,0,.5); color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.4;-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance}
+.num{font-variant-numeric:tabular-nums}
+
+.gutter{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1080px;margin:0 auto}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:12px;min-height:54px}
+.brand{font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:.01em;white-space:nowrap}
+.brand b{color:var(--accent);font-weight:700}
+.top nav{display:none;gap:4px;margin-left:12px}
+.spacer{flex:1}
+.mode{font-size:12px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.mode.shared{background:var(--accent-soft);color:var(--accent)}
+.me{width:30px;height:30px;border-radius:50%;background:var(--surface-2);object-fit:cover}
+.tab{background:none;border:0;padding:8px 12px;border-radius:8px;font-weight:600;color:var(--muted)}
+.tab[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 14px;font-weight:600;min-height:44px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.quiet{background:none;border-color:transparent;color:var(--accent);padding-inline:8px}
+.btn.danger{color:var(--crit)}
+.btn:disabled{opacity:.55;cursor:default}
+.top .btn.primary{display:none;min-height:38px;padding:7px 12px}
+
+/* bottom tab bar (phones) */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:8;background:var(--surface);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom,0px)}
+.bar .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
+.bar .tab{border-radius:0;padding:10px 4px;font-family:var(--font-display);font-size:16px;letter-spacing:.02em;min-height:52px}
+.bar .tab[aria-current="page"]{background:none;box-shadow:inset 0 3px 0 var(--accent)}
+.fab{position:fixed;z-index:8;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(64px + env(safe-area-inset-bottom,0px));
+  box-shadow:var(--shadow);border-radius:999px;padding:12px 18px}
+
+main{padding-block:16px 150px}
+.notes{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.note{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--muted);
+  display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.note.warn{background:var(--warn-soft);border-color:transparent;color:var(--warn)}
+.note span{flex:1 1 220px;min-width:0}
+.note .btn{min-height:36px;padding:6px 10px;font-size:14px}
+
+.head{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin-bottom:12px}
+.head h1{font-size:28px;line-height:1.1}
+.head p{margin:0;color:var(--muted);font-size:14px}
+.head .btn{margin-left:auto}
+
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:18px}
+.stat{background:var(--surface);padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat b{font-family:var(--font-display);font-size:28px;line-height:1;font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--muted)}
+.stat.crit b{color:var(--crit)} .stat.warn b{color:var(--warn)}
+
+.cols{display:grid;gap:18px}
+.sec{min-width:0}
+.sec h2{font-size:15px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline}
+.sec h2 em{font-style:normal;font-family:var(--font-body);font-weight:500;text-transform:none;letter-spacing:0;font-size:13px}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;text-align:left;
+  background:none;border:0;border-bottom:1px solid var(--line);padding:11px 12px;min-height:56px}
+.list>:last-child{border-bottom:0}
+.row:hover{background:var(--surface-2)}
+.row-main{display:flex;flex-direction:column;gap:2px;min-width:0}
+.row-title{font-weight:600;overflow-wrap:anywhere}
+.row-sub{font-size:13.5px;color:var(--muted);overflow-wrap:anywhere}
+.chev{color:var(--muted);font-size:20px}
+.empty{padding:16px 12px;color:var(--muted);font-size:14.5px}
+.more{padding:9px 12px;font-size:13.5px;color:var(--muted)}
+
+.age{font-family:var(--font-display);font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;min-width:52px;text-align:center;
+  padding:5px 6px;border-radius:7px;white-space:nowrap}
+.when{font-family:var(--font-display);font-weight:700;min-width:52px;text-align:center;line-height:1.1;font-variant-numeric:tabular-nums}
+.when small{display:block;font-family:var(--font-body);font-weight:500;font-size:12px;color:var(--muted)}
+.t-ok{background:var(--ok-soft);color:var(--ok)} .t-warn{background:var(--warn-soft);color:var(--warn)}
+.t-crit{background:var(--crit-soft);color:var(--crit)} .t-mute{background:var(--surface-2);color:var(--muted)}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:1px 7px;border-radius:999px;margin-left:6px;white-space:nowrap;vertical-align:1px}
+.tag.ex{background:var(--surface-2);color:var(--muted)}
+.tag.plan{background:var(--accent-soft);color:var(--accent);margin-left:0}
+.dots{display:inline-flex;gap:4px}
+.dot{width:11px;height:11px;border-radius:3px;background:var(--surface-2);border:1px solid var(--line)}
+.dot.ok{background:var(--ok);border-color:var(--ok)} .dot.warn{background:var(--warn);border-color:var(--warn)} .dot.bad{background:var(--crit);border-color:var(--crit)}
+.mts{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+.mt{font-family:var(--font-display);font-weight:600;font-size:12.5px;padding:0 6px;border-radius:5px;line-height:18px;border:1px solid transparent}
+.mt.on{background:var(--accent-soft);color:var(--accent)}
+.mt.off{border-color:var(--crit);color:var(--crit);text-decoration:line-through}
+.mt.na{border-color:var(--line);color:var(--muted)}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-weight:600;font-size:14px;min-height:38px}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.search{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:11px 12px;margin-bottom:10px}
+.weeknav{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.weeknav b{font-family:var(--font-display);font-size:18px;flex:1;text-align:center;font-variant-numeric:tabular-nums}
+.weeknav .btn{min-width:44px;padding-inline:10px}
+.day{margin-bottom:12px}
+.day h3{font-size:15px;margin-bottom:6px;display:flex;gap:8px;align-items:baseline}
+.day h3 span{font-family:var(--font-body);font-weight:500;color:var(--muted);font-size:13.5px}
+.day.today h3{color:var(--accent)}
+
+/* sheet */
+.scrim{position:fixed;inset:0;z-index:20;background:var(--scrim);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:580px;max-height:92%;overflow:auto;border-radius:16px 16px 0 0;box-shadow:var(--shadow);
+  padding-top:14px;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));overscroll-behavior:contain}
+.sheet-head{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px}
+.sheet-head h2{font-size:22px;line-height:1.15;flex:1;min-width:0;overflow-wrap:anywhere}
+.x{border:0;background:var(--surface-2);border-radius:50%;width:36px;height:36px;font-size:18px;line-height:1;flex:none}
+.form{display:flex;flex-direction:column;gap:14px}
+.f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.f>label,.f>.lab{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.f input,.f select,.f textarea{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:11px 12px;width:100%;min-height:46px}
+.f textarea{min-height:92px;resize:vertical}
+.f .hint{font-size:13px;color:var(--muted)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
+.seg button{border:0;border-right:1px solid var(--line);background:none;padding:10px 4px;font-weight:600;font-size:14.5px;min-height:44px}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.seg button[aria-pressed="true"][data-val="ok"]{background:var(--ok-soft);color:var(--ok)}
+.seg button[aria-pressed="true"][data-val="warn"]{background:var(--warn-soft);color:var(--warn)}
+.seg button[aria-pressed="true"][data-val="bad"]{background:var(--crit-soft);color:var(--crit)}
+.kpi{display:flex;flex-direction:column;gap:10px}
+.kpi .f>.lab{text-transform:none;letter-spacing:0;font-size:15px;color:var(--ink)}
+.models{display:flex;flex-wrap:wrap;gap:6px}
+.models .chip{font-family:var(--font-display);font-size:16px;min-width:52px}
+.micline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mic{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px;font-weight:600;font-size:14px;min-height:38px}
+.mic.live{background:var(--crit-soft);border-color:transparent;color:var(--crit)}
+.partial{font-size:13.5px;color:var(--muted);font-style:italic;min-width:0;flex:1 1 160px}
+details.sub{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+details.sub summary{font-weight:600;cursor:pointer}
+details.sub .form{margin-top:12px}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.actions .btn.primary{flex:1 1 180px}
+.meta{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;font-size:15px;margin:0}
+.meta dt{color:var(--muted)} .meta dd{margin:0;overflow-wrap:anywhere}
+.log{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.log li{border-left:2px solid var(--line);padding-left:10px;overflow-wrap:anywhere}
+.log small{display:block;color:var(--muted);font-size:13px}
+.kv{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.kv:last-child{border-bottom:0}
+.sheet h3{font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:16px 0 8px}
+.toast{position:fixed;z-index:30;left:50%;transform:translateX(-50%);bottom:calc(130px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);
+  padding:10px 16px;border-radius:10px;font-weight:600;font-size:14.5px;max-width:calc(100% - 32px);box-shadow:var(--shadow)}
+
+@media (min-width:900px){
+  .top nav{display:flex} .top .btn.primary{display:inline-block}
+  .bar,.fab{display:none}
+  main{padding-block:22px 60px}
+  .stats{grid-template-columns:repeat(4,1fr)}
+  .cols{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start}
+  .cols .stack{display:grid;gap:18px}
+  .scrim{align-items:center}
+  .sheet{border-radius:16px;max-height:88%;padding-bottom:20px}
+  .toast{bottom:32px}
+}
+@media (prefers-reduced-motion:no-preference){ .sheet{animation:up .18s ease-out} @keyframes up{from{transform:translateY(14px);opacity:.6}to{transform:none;opacity:1}} }
+
+/* sign-in */
+.gate{min-height:70vh;display:flex;align-items:center;justify-content:center;padding-block:32px}
+.gate-card{width:100%;max-width:400px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 20px;display:flex;flex-direction:column;gap:16px}
+.gate-card .brand{font-size:26px}
+.gate-card p{margin:0;color:var(--muted);font-size:14.5px}
+.gate-msg{min-height:20px;font-size:14px;color:var(--crit)}
+.gate-msg.ok{color:var(--ok)}
+.gated .top,.gated main,.gated .bar,.gated .fab{display:none!important}
+</style>
+</head>
+<body>
+<script>
+/* ============================================================================
+   FIREBASE – sem vlož konfiguráciu svojho projektu.
+   Firebase konzola → Project settings (ozubené koliesko) → Your apps → Web app
+   → skopíruj objekt firebaseConfig a nahraď ním slovo null nižšie, napr.:
+
+   window.FIREBASE_CONFIG = {
+     apiKey: "…", authDomain: "…", projectId: "…",
+     storageBucket: "…", messagingSenderId: "…", appId: "…"
+   };
+   ============================================================================ */
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDfa4A67RV4PB7V3xmZKR8V2tGabXK8LIw",
+  authDomain: "ga-vehicles.firebaseapp.com",
+  databaseURL: "https://ga-vehicles-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "ga-vehicles",
+  storageBucket: "ga-vehicles.firebasestorage.app",
+  messagingSenderId: "1046010459397",
+  appId: "1:1046010459397:web:289cf4fff293622a7b736c"
+};
+</script>
+
+<div class="gate gutter" id="gate" hidden><div class="gate-card">
+  <div class="brand">Zónový <b>denník</b></div>
+  <form class="form" id="gate-login" data-form="login" novalidate>
+    <div class="f"><label for="g-email">E-mail</label><input id="g-email" type="email" autocomplete="username" inputmode="email" required></div>
+    <div class="f"><label for="g-pw">Heslo</label><input id="g-pw" type="password" autocomplete="current-password" required></div>
+    <div class="gate-msg" id="gate-msg" role="status"></div>
+    <div class="actions"><button class="btn primary" type="submit">Prihlásiť</button><button class="btn quiet" type="button" data-act="reset-pw">Zabudnuté heslo</button></div>
+  </form>
+  <form class="form" id="gate-name" data-form="name" novalidate hidden>
+    <p>Prvé prihlásenie. Pod týmto menom ťa uvidia kolegovia pri zápisoch a bodoch.</p>
+    <div class="f"><label for="g-name">Meno a priezvisko</label><input id="g-name" type="text" maxlength="60" autocomplete="name" required></div>
+    <div class="actions"><button class="btn primary" type="submit">Pokračovať</button><button class="btn quiet" type="button" data-act="signout">Odhlásiť</button></div>
+  </form>
+</div></div>
+
+
+<header class="top"><div class="wrap gutter">
+  <div class="brand">Zónový <b>denník</b></div>
+  <nav aria-label="Hlavná navigácia" id="nav-top"></nav>
+  <div class="spacer"></div>
+  <span class="mode" id="mode">Načítavam…</span>
+  <button class="btn primary" data-act="new-report" id="hdr-new">+ Zápis z návštevy</button>
+  <button class="btn quiet" data-act="signout" id="signout" hidden>Odhlásiť</button>
+</div></header>
+
+<main class="gutter"><div class="wrap">
+  <div class="notes" id="notes"></div>
+  <div id="view"></div>
+</div></main>
+
+<button class="btn primary fab" data-act="new-report" id="fab">+ Zápis</button>
+<div class="bar"><nav class="wrap" aria-label="Hlavná navigácia" id="nav-bottom"></nav></div>
+<div id="sheet-root"></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+"use strict";
+/* ---------- reference data (sales points and codes as in Showroom Traffic; zone by region) ---------- */
+const MODELS=['O5','O7','O9','J5','J7','J8'];
+const MODEL_NAME={O5:'Omoda 5',O7:'Omoda 7',O9:'Omoda 9',J5:'Jaecoo 5',J7:'Jaecoo 7',J8:'Jaecoo 8'};
+const KPIS=[['sales','Predaj a objednávky'],['stock','Sklad a demo vozidlá'],['standards','Štandardy showroomu'],['leads','Leady a test jazdy']];
+const RATING={ok:'V poriadku',warn:'Pozor',bad:'Problém'};
+const CATS={vozidla:'Vozidlá a dodávky',sklad:'Sklad a demo',standardy:'Štandardy',leady:'Leady a marketing',fleet:'Fleet',ine:'Iné'};
+const VTYPE={visit:'Osobne',call:'Telefonát',online:'Online'};
+const ZONES={Z:'Západ',S:'Stred',V:'Východ'};
+const DEALERS=[
+ ['OSK0020','AUTOŠTÝL (Trenčianska Turná)','Z'],
+ ['OSK0021','AUTOŠTÝL (Bratislava)','Z'],
+ ['OSK0030','Béhr a Béhr (Trnava)','Z'],
+ ['OSK0100','M.A.N. (Komárno)','Z'],
+ ['OSK0120','FINAL-CD (Bratislava)','Z'],
+ ['OSK0140','AUTO-RÁCZ (Levice)','Z'],
+ ['OSK0150','MOTORBOX (Továrníky)','Z'],
+ ['OSK0151','MOTORBOX (Bojnice)','Z'],
+ ['OSK0170','ALBEX PLUS (Nitra)','Z'],
+ ['OSK0190','Autoteam (Stupava)','Z'],
+ ['OSK0200','PETRO CARS (Galanta)','Z'],
+ ['OSK0050','AUTO VIBA (Lučenec)','S'],
+ ['OSK0060','J.M.MARTIN (Martin)','S'],
+ ['OSK0080','LION CAR (Banská Bystrica)','S'],
+ ['OSK0090','UNICAR (Liptovský Mikuláš)','S'],
+ ['OSK0130','Auto Becchi (Žilina)','S'],
+ ['OSK0010','BUILT (Prešov)','V'],
+ ['OSK0011','BUILT (Košice)','V'],
+ ['OSK0040','AUTOVENDY (Plavnica)','V'],
+ ['OSK0110','WINKLER (Michalovce)','V'],
+ ['OSK0160','AUTO SWAM (Košice)','V'],
+ ['OSK0180','Benrox Plus (Humenné)','V'],
+ ['OSK0210','EKOAUTO (Bardejov)','V']
+].map(([id,name,zone])=>({id,name,zone}));
+const DEALER=Object.fromEntries(DEALERS.map(d=>[d.id,d]));
+const TABS=[['prehlad','Prehľad'],['plan','Plán'],['body','Body'],['dileri','Díleri']];
+const STALE_WARN=8, STALE_CRIT=15, NO_VISIT_DAYS=30;
+
+/* ---------- helpers ---------- */
+const $=(s,r)=>(r||document).querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parse=s=>{const p=String(s).slice(0,10).split('-').map(Number);return new Date(p[0],p[1]-1,p[2]);};
+const today=()=>ymd(new Date());
+const daysBetween=(a,b)=>Math.round((parse(b)-parse(a))/864e5);
+const daysAgo=s=>s?daysBetween(s,today()):0;
+const addDays=(s,n)=>{const d=parse(s);d.setDate(d.getDate()+n);return ymd(d);};
+const monday=s=>{const d=parse(s);d.setDate(d.getDate()-((d.getDay()+6)%7));return ymd(d);};
+const fmt=s=>{if(!s)return '';const d=parse(s);return d.getDate()+'. '+(d.getMonth()+1)+'.';};
+const WD=['Pondelok','Utorok','Streda','Štvrtok','Piatok','Sobota','Nedeľa'];
+const isoWeek=s=>{const d=parse(s);d.setDate(d.getDate()+3-((d.getDay()+6)%7));const w1=new Date(d.getFullYear(),0,4);
+  return 1+Math.round(((d-w1)/864e5-3+((w1.getDay()+6)%7))/7);};
+const daysWord=n=>n===1?'deň':(n>=2&&n<=4?'dni':'dní');
+const ago=n=>n<=0?'dnes':n===1?'včera':'pred '+n+' dňami';
+const nid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const clone=o=>JSON.parse(JSON.stringify(o));
+const dealerName=id=>(DEALER[id]?DEALER[id].name:'Neznámy díler');
+
+/* ---------- state ---------- */
+const S={mode:'loading',visits:new Map(),issues:new Map(),people:new Map(),loaded:{visits:false,issues:false},slow:false,
+  me:null,canWrite:true,names:new Map(),sheet:null,issueFilter:'open',zone:'all',q:'',weekOffset:0,confirmRm:false,
+  micTarget:null,micState:'idle',micOk:true,unsubs:null,peopleLoaded:false,gate:null};
+let fb=null,rec=null;
+const FB_VER='13.2.0', FB_BASE='https://www.gstatic.com/firebasejs/'+FB_VER+'/';
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition||null;
+const LS='zonovy-dennik-local-v1';
+
+const list=c=>[...S[c]].map(([id,d])=>Object.assign({id},d));
+function who(uid,label){ if(uid){ const p=S.people.get(uid); return (p&&p.name)||(uid===S.me?'Ja':'Kolega'); } return label||'Bez vlastníka'; }
+function peopleIds(){ const s=new Set(); if(S.me) s.add(S.me); for(const id of S.people.keys()) s.add(id);
+  for(const v of S.visits.values()) if(v.by) s.add(v.by); for(const i of S.issues.values()) if(i.owner) s.add(i.owner); return [...s]; }
+function ownerOptions(sel){ return '<option value="">Bez vlastníka</option>'+peopleIds().map(id=>'<option value="'+esc(id)+'"'+(id===sel?' selected':'')+'>'+esc(who(id))+'</option>').join(''); }
+function dealerOptions(sel){ return '<option value="">Vyber dílera…</option>'+Object.keys(ZONES).map(z=>'<optgroup label="'+ZONES[z]+'">'+
+  DEALERS.filter(d=>d.zone===z).map(d=>'<option value="'+d.id+'"'+(d.id===sel?' selected':'')+'>'+esc(d.name)+'</option>').join('')+'</optgroup>').join(''); }
+
+/* ---------- derived ---------- */
+const doneVisits=()=>list('visits').filter(v=>v.status==='done');
+function lastVisit(did){ let b=null; for(const v of doneVisits()) if(v.dealer===did&&(!b||v.date>b.date)) b=v; return b; }
+function lastModels(did){ let b=null; for(const v of doneVisits()) if(v.dealer===did&&Array.isArray(v.models)&&(!b||v.date>b.date)) b=v; return b; }
+const openIssues=()=>list('issues').filter(i=>i.status!=='closed');
+const overdue=i=>i.status!=='closed'&&i.due&&i.due<today();
+function tone(i){ const st=daysAgo(i.updatedOn); if(overdue(i)||st>=STALE_CRIT) return 'crit'; if(st>=STALE_WARN) return 'warn'; return 'ok'; }
+const staleText=n=>n<=0?'aktualizované dnes':'bez pohybu '+n+' '+daysWord(n);
+
+/* ---------- storage ---------- */
+function toast(t){ const el=$('#toast'); el.textContent=t; el.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>{el.hidden=true;},3200); }
+function writeFailed(e){ const c=e&&e.code;
+  if(c==='permission-denied'){ toast('Zápis bol zamietnutý. Skontroluj pravidlá vo Firebase.'); }
+  else if(c==='resource-exhausted') toast('Denný limit databázy je vyčerpaný, záznam sa neuložil.');
+  else toast('Uloženie zlyhalo, skús to znova.'); }
+function saveLocal(){ try{ localStorage.setItem(LS,JSON.stringify({visits:[...S.visits],issues:[...S.issues]})); }catch(e){} }
+function loadLocal(){ try{ const o=JSON.parse(localStorage.getItem(LS)||'null'); if(o){ S.visits=new Map(o.visits||[]); S.issues=new Map(o.issues||[]); } }catch(e){} }
+/* Shared writes are not awaited: Firestore applies them locally at once and syncs when the phone is back online. */
+async function put(coll,id,doc){
+  if(S.mode==='shared'){ fb.set(coll,id,doc).catch(writeFailed); }
+  else { S[coll].set(id,doc); saveLocal(); onData(); } }
+async function del(coll,id){
+  if(S.mode==='shared'){ fb.del(coll,id).catch(writeFailed); }
+  else { S[coll].delete(id); saveLocal(); onData(); } }
+
+function subscribe(){
+  S.slow=false;
+  S.unsubs=['visits','issues','people'].map(c=>fb.listen(c,snap=>{
+      S[c]=new Map(snap.docs.map(d=>[d.id,d.data()]));
+      if(c in S.loaded && (!snap.metadata.fromCache||!snap.empty)) S.loaded[c]=true;
+      if(c==='people'){ if(!snap.metadata.fromCache||S[c].has(S.me)) S.peopleLoaded=true;
+        if(S.peopleLoaded) setGate((S.people.get(S.me)||{}).name?null:'name'); }
+      onData();
+    },err=>{ if(c in S.loaded) S.loaded[c]=true; if(err&&err.code==='permission-denied') S.denied=true; onData(); }));
+  setTimeout(()=>{ if(S.mode==='shared'&&!(S.loaded.visits&&S.loaded.issues)){ S.slow=true; render(); } },10000);
+}
+function refreshNames(){}
+function onData(){ refreshNames(); render(); refreshSheet(); }
+
+/* ---------- row templates ---------- */
+const exTag=o=>o.example?'<span class="tag ex">príklad</span>':'';
+function issueRow(i){ const closed=i.status==='closed', t=tone(i);
+  const sub=[dealerName(i.dealer),who(i.owner,i.ownerLabel),closed?'uzavreté '+fmt(i.closedOn):staleText(daysAgo(i.updatedOn))];
+  return '<button class="row" data-act="open-issue" data-id="'+esc(i.id)+'"><span class="age num '+(closed?'t-mute':'t-'+t)+'">'+(closed?'✓':'D+'+daysAgo(i.createdOn))+'</span>'+
+   '<span class="row-main"><span class="row-title">'+esc(i.title)+'</span><span class="row-sub">'+sub.map(esc).join(' · ')+
+   (overdue(i)?'<span class="tag t-crit">termín '+fmt(i.due)+'</span>':'')+exTag(i)+'</span></span><span class="chev" aria-hidden="true">›</span></button>'; }
+function kpiDots(k){ k=k||{}; return '<span class="dots" role="img" aria-label="'+esc(KPIS.map(([key,l])=>l+': '+(RATING[k[key]]||'nehodnotené')).join(', '))+'">'+
+  KPIS.map(([key])=>'<span class="dot '+(k[key]||'')+'"></span>').join('')+'</span>'; }
+function visitRow(v,withDate){ const planned=v.status!=='done';
+  const left=withDate?'<span class="when num">'+fmt(v.date)+(v.time?'<small>'+esc(v.time)+'</small>':'')+'</span>':'<span class="when num">'+(v.time?esc(v.time):'—')+'</span>';
+  const sub=[who(v.by,v.byLabel),planned?(v.purpose||VTYPE[v.type]||''):(VTYPE[v.type]||'')].filter(Boolean);
+  return '<button class="row" data-act="open-visit" data-id="'+esc(v.id)+'">'+left+'<span class="row-main"><span class="row-title">'+esc(dealerName(v.dealer))+'</span>'+
+   '<span class="row-sub">'+sub.map(esc).join(' · ')+exTag(v)+'</span></span>'+(planned?'<span class="tag plan">plán</span>':kpiDots(v.kpi))+'</button>'; }
+function modelTags(models){ if(!Array.isArray(models)) return '<div class="mts">'+MODELS.map(m=>'<span class="mt na">'+m+'</span>').join('')+'</div>';
+  return '<div class="mts">'+MODELS.map(m=>'<span class="mt '+(models.includes(m)?'on':'off')+'" title="'+MODEL_NAME[m]+(models.includes(m)?'':' chýba')+'">'+m+'</span>').join('')+'</div>'; }
+const sec=(title,extra,body)=>'<section class="sec"><h2>'+title+(extra?' <em>'+extra+'</em>':'')+'</h2>'+body+'</section>';
+const listBox=(rows,emptyText)=>'<div class="list">'+(rows.length?rows.join(''):'<div class="empty">'+emptyText+'</div>')+'</div>';
+
+/* ---------- views ---------- */
+const loadingData=()=>S.mode==='loading'||(S.mode==='shared'&&!(S.loaded.visits&&S.loaded.issues));
+function viewPrehlad(){
+  const t=today(), mon=monday(t), sun=addDays(mon,6), open=openIssues();
+  const hot=open.filter(i=>tone(i)!=='ok').sort((a,b)=>daysAgo(b.updatedOn)-daysAgo(a.updatedOn));
+  const stale14=open.filter(i=>daysAgo(i.updatedOn)>=STALE_CRIT).length;
+  const week=list('visits').filter(v=>v.date>=mon&&v.date<=sun).sort((a,b)=>(a.date+(a.time||''))<(b.date+(b.time||''))?-1:1);
+  const weekDone=week.filter(v=>v.status==='done').length;
+  const noVisit=DEALERS.map(d=>{const lv=lastVisit(d.id);return {d,n:lv?daysAgo(lv.date):null};}).filter(x=>x.n===null||x.n>NO_VISIT_DAYS)
+    .sort((a,b)=>(b.n===null?1e6:b.n)-(a.n===null?1e6:a.n));
+  const missing=DEALERS.map(d=>{const lm=lastModels(d.id); if(!lm) return null; const miss=MODELS.filter(m=>!lm.models.includes(m)); return miss.length?{d,miss,date:lm.date}:null;}).filter(Boolean);
+  const empty=loadingData()?'Načítavam záznamy…':null;
+  const stats='<div class="stats">'+
+    '<div class="stat"><b class="num">'+open.length+'</b><span>otvorených bodov</span></div>'+
+    '<div class="stat'+(stale14?' crit':'')+'"><b class="num">'+stale14+'</b><span>bez pohybu '+STALE_CRIT+'+ dní</span></div>'+
+    '<div class="stat"><b class="num">'+weekDone+' / '+week.length+'</b><span>návštev tento týždeň</span></div>'+
+    '<div class="stat'+(missing.length?' warn':'')+'"><b class="num">'+missing.length+'</b><span>dílerov s chýbajúcim modelom</span></div></div>';
+  const left=sec('Vyžaduje pozornosť','bez pohybu '+STALE_WARN+'+ dní alebo po termíne',listBox(hot.map(issueRow),empty||'Žiadny bod nevisí. Tu sa objaví každý, s ktorým sa '+STALE_WARN+' dní nič nedialo.'))+
+    sec('Chýbajúci model v showroome','podľa poslednej návštevy',listBox(missing.map(x=>'<button class="row" data-act="open-dealer" data-id="'+x.d.id+'"><span class="age t-warn">'+x.miss.join(' ')+'</span><span class="row-main"><span class="row-title">'+esc(x.d.name)+'</span><span class="row-sub">zistené '+fmt(x.date)+' · '+esc(x.miss.map(m=>MODEL_NAME[m]).join(', '))+'</span></span><span class="chev" aria-hidden="true">›</span></button>'),empty||'Všetci díleri s vyplnenou kontrolou majú všetkých šesť modelov.'));
+  const right=sec('Tento týždeň',fmt(mon)+' – '+fmt(sun),listBox(week.map(v=>visitRow(v,true)),empty||'Na tento týždeň nie je nič naplánované.'))+
+    sec('Dlho bez návštevy','viac ako '+NO_VISIT_DAYS+' dní',listBox(noVisit.slice(0,5).map(x=>'<button class="row" data-act="open-dealer" data-id="'+x.d.id+'"><span class="age num '+(x.n===null?'t-mute':'t-warn')+'">'+(x.n===null?'—':x.n+' d')+'</span><span class="row-main"><span class="row-title">'+esc(x.d.name)+'</span><span class="row-sub">'+(x.n===null?'zatiaľ bez záznamu':'posledná návšteva '+ago(x.n))+'</span></span><span class="chev" aria-hidden="true">›</span></button>').concat(noVisit.length>5?['<div class="more">a ďalších '+(noVisit.length-5)+' v zozname Díleri</div>']:[]),'Každý díler mal návštevu za posledných '+NO_VISIT_DAYS+' dní.'));
+  return '<div class="head"><h1>Prehľad</h1><p>'+WD[(parse(t).getDay()+6)%7]+' '+fmt(t)+' · týždeň '+isoWeek(t)+'</p></div>'+stats+'<div class="cols"><div class="stack">'+left+'</div><div class="stack">'+right+'</div></div>';
+}
+function viewPlan(){
+  const mon=addDays(monday(today()),S.weekOffset*7), t=today(), all=list('visits');
+  let days='';
+  for(let k=0;k<7;k++){ const d=addDays(mon,k); const vs=all.filter(v=>v.date===d).sort((a,b)=>(a.time||'99')<(b.time||'99')?-1:1);
+    if(k>4&&!vs.length) continue;
+    days+='<div class="day'+(d===t?' today':'')+'"><h3>'+WD[k]+' <span>'+fmt(d)+(d===t?' · dnes':'')+'</span></h3>'+listBox(vs.map(v=>visitRow(v,false)),'Nič naplánované')+'</div>'; }
+  return '<div class="head"><h1>Plán návštev</h1>'+(S.canWrite?'<button class="btn" data-act="new-plan">+ Naplánovať</button>':'')+'</div>'+
+    '<div class="weeknav"><button class="btn" data-act="week" data-d="-1" aria-label="Predchádzajúci týždeň">‹</button><b>Týždeň '+isoWeek(mon)+' · '+fmt(mon)+' – '+fmt(addDays(mon,6))+'</b>'+
+    '<button class="btn" data-act="week" data-d="1" aria-label="Nasledujúci týždeň">›</button></div>'+(S.weekOffset?'<div class="chips"><button class="chip" data-act="week" data-d="0">Späť na tento týždeň</button></div>':'')+days;
+}
+function viewBody(){
+  const f=S.issueFilter; let rows=list('issues');
+  if(f==='open') rows=rows.filter(i=>i.status!=='closed'); else if(f==='mine') rows=rows.filter(i=>i.status!=='closed'&&i.owner&&i.owner===S.me);
+  else if(f==='stale') rows=rows.filter(i=>i.status!=='closed'&&tone(i)!=='ok'); else rows=rows.filter(i=>i.status==='closed');
+  rows.sort((a,b)=>f==='closed'?(a.closedOn<b.closedOn?1:-1):daysAgo(b.updatedOn)-daysAgo(a.updatedOn));
+  const chip=(k,l)=>'<button class="chip" data-act="ifilter" data-f="'+k+'" aria-pressed="'+(f===k)+'">'+l+'</button>';
+  const emptyT={open:'Žiadne otvorené body.',mine:'Nemáš priradený žiadny otvorený bod.',stale:'Nič nevisí bez pohybu.',closed:'Zatiaľ nič uzavreté.'}[f];
+  return '<div class="head"><h1>Otvorené body</h1>'+(S.canWrite?'<button class="btn" data-act="new-issue">+ Nový bod</button>':'')+'</div>'+
+    '<div class="chips">'+chip('open','Otvorené')+chip('mine','Moje')+chip('stale','Bez pohybu')+chip('closed','Uzavreté')+'</div>'+
+    listBox(rows.map(issueRow),loadingData()?'Načítavam záznamy…':emptyT)+
+    '<p class="more">D+ je počet dní od založenia bodu. Farba sa mení po '+STALE_WARN+' a '+STALE_CRIT+' dňoch bez aktualizácie alebo po termíne.</p>';
+}
+function dealerRows(){
+  const q=S.q.trim().toLowerCase(), open=openIssues();
+  const ds=DEALERS.filter(d=>(S.zone==='all'||d.zone===S.zone)&&(!q||d.name.toLowerCase().includes(q)));
+  return listBox(ds.map(d=>{ const lv=lastVisit(d.id), lm=lastModels(d.id), n=open.filter(i=>i.dealer===d.id).length;
+    return '<button class="row" data-act="open-dealer" data-id="'+d.id+'"><span class="age num '+(n?'t-warn':'t-mute')+'">'+n+'</span><span class="row-main"><span class="row-title">'+esc(d.name)+'</span>'+
+     '<span class="row-sub">'+ZONES[d.zone]+' · '+(lv?'návšteva '+ago(daysAgo(lv.date)):'zatiaľ bez záznamu')+'</span>'+modelTags(lm?lm.models:null)+'</span><span class="chev" aria-hidden="true">›</span></button>'; }),'Žiadny díler nezodpovedá hľadaniu.');
+}
+function viewDileri(){
+  const chip=(k,l)=>'<button class="chip" data-act="zone" data-z="'+k+'" aria-pressed="'+(S.zone===k)+'">'+l+'</button>';
+  return '<div class="head"><h1>Díleri</h1><p>'+DEALERS.length+' predajných miest · číslo vľavo je počet otvorených bodov</p></div>'+
+    '<input class="search" id="q" type="search" placeholder="Hľadať dílera" aria-label="Hľadať dílera" value="'+esc(S.q)+'">'+
+    '<div class="chips">'+chip('all','Všetky')+chip('Z','Západ')+chip('S','Stred')+chip('V','Východ')+'</div><div id="dealer-list">'+dealerRows()+'</div>';
+}
+const VIEWS={prehlad:viewPrehlad,plan:viewPlan,body:viewBody,dileri:viewDileri};
+const route=()=>{const h=location.hash.replace('#','');return VIEWS[h]?h:'prehlad';};
+
+function renderNotes(){
+  const n=[];
+  if(S.mode==='local') n.push('<div class="note warn"><span>'+(S.loadError?'Nepodarilo sa pripojiť k Firebase. Skontroluj konfiguráciu a pripojenie.':'Appka zatiaľ nie je prepojená s Firebase.')+' Zápisy ostávajú len v tomto zariadení a kolegovia ich neuvidia.</span></div>');
+  if(S.denied) n.push('<div class="note warn"><span>Databáza odmietla prístup. Skontroluj pravidlá (Rules) vo Firestore.</span></div>');
+  if(S.mode==='shared'&&S.slow&&loadingData()) n.push('<div class="note warn"><span>Dáta sa zatiaľ nepodarilo načítať, pravdepodobne chýba signál. Skúšam ďalej.</span></div>');
+  const ex=list('visits').filter(v=>v.example).length+list('issues').filter(i=>i.example).length;
+  if(ex&&S.canWrite) n.push(S.confirmRm
+    ?'<div class="note warn"><span>Odstrániť '+ex+' ukážkových záznamov? Vaše vlastné zápisy ostanú.</span><button class="btn" data-act="rm-yes">Áno, odstrániť</button><button class="btn" data-act="rm-no">Nie</button></div>'
+    :'<div class="note"><span>Záznamy označené „príklad“ sú ukážkové, aby bolo vidno, ako denník vyzerá naplnený. Predajné miesta sú pomenované podľa miest.</span><button class="btn" data-act="rm-ask">Odstrániť príklady</button></div>');
+  $('#notes').innerHTML=n.join('');
+}
+function render(){
+  const r=route(), ae=document.activeElement, keep=ae&&ae.id&&$('#view').contains(ae)?{id:ae.id,s:ae.selectionStart,e:ae.selectionEnd}:null;
+  $('#view').innerHTML=VIEWS[r]();
+  if(keep){ const el=document.getElementById(keep.id); if(el){ el.focus(); try{ el.setSelectionRange(keep.s,keep.e); }catch(e){} } }
+  const nav=TABS.map(([k,l])=>'<button class="tab" data-act="go" data-r="'+k+'"'+(k===r?' aria-current="page"':'')+'>'+l+'</button>').join('');
+  $('#nav-bottom').innerHTML=nav; $('#nav-top').innerHTML=nav;
+  const m=$('#mode'), myName=(S.people.get(S.me)||{}).name; m.textContent=S.mode==='shared'?(myName||'Prihlásený'):S.mode==='local'?'Len toto zariadenie':'Načítavam…'; m.className='mode'+(S.mode==='shared'?' shared':'');
+  $('#fab').hidden=!S.canWrite; $('#hdr-new').hidden=!S.canWrite; $('#signout').hidden=S.mode!=='shared';
+  renderNotes();
+}
+
+/* ---------- sheets ---------- */
+function micBlock(target){
+  if(SR&&S.micOk) return '<div class="micline"><button type="button" class="mic" data-act="mic" data-target="'+target+'">Diktovať</button><span class="partial" data-for="'+target+'"></span></div>';
+  return '<span class="hint">Tip: na mobile nadiktuješ text mikrofónom na klávesnici.</span>';
+}
+const fld=(label,id,inner,hint)=>'<div class="f"><label for="'+id+'">'+label+'</label>'+inner+(hint?'<span class="hint">'+hint+'</span>':'')+'</div>';
+const segBtns=(group,opts,val)=>'<div class="seg" role="group">'+opts.map(([v,l])=>'<button type="button" data-act="seg" data-group="'+group+'" data-val="'+v+'" aria-pressed="'+(val===v)+'">'+l+'</button>').join('')+'</div>';
+
+function sheetReport(sh){ const d=sh.draft;
+  return '<form class="form" data-form="report" novalidate>'+
+   '<div class="two">'+fld('Díler','f-dealer','<select id="f-dealer" required>'+dealerOptions(d.dealer)+'</select>')+fld('Dátum','f-date','<input id="f-date" type="date" value="'+esc(d.date)+'" required>')+'</div>'+
+   '<div class="f"><span class="lab">Forma</span>'+segBtns('type',Object.entries(VTYPE),d.type)+'</div>'+
+   '<div class="kpi">'+KPIS.map(([k,l])=>'<div class="f"><span class="lab">'+l+'</span>'+segBtns('kpi-'+k,Object.entries(RATING),d.kpi[k]||'')+'</div>').join('')+'</div>'+
+   '<div class="f"><span class="lab">Modely v showroome alebo ako demo</span><div class="models">'+MODELS.map(m=>'<button type="button" class="chip" data-act="model" data-m="'+m+'" aria-pressed="'+d.models.includes(m)+'" title="'+MODEL_NAME[m]+'">'+m+'</button>').join('')+
+     '<button type="button" class="chip" data-act="model-all">Všetkých 6</button></div><span class="hint" id="f-models-hint">'+modelsHint(d)+'</span></div>'+
+   fld('Záver z návštevy','f-note','<textarea id="f-note" placeholder="Čo sa riešilo a na čom ste sa dohodli">'+esc(d.note||'')+'</textarea>'+micBlock('f-note'))+
+   '<details class="sub" id="f-isub"><summary>Otvoriť bod z tejto návštevy</summary><div class="form">'+
+     fld('Čo treba vyriešiť','f-ititle','<input id="f-ititle" type="text" maxlength="160" placeholder="Napr. chýba vystavená Jaecoo 8">')+
+     '<div class="two">'+fld('Vlastník','f-iowner','<select id="f-iowner">'+ownerOptions(S.me)+'</select>')+fld('Termín','f-idue','<input id="f-idue" type="date" value="'+addDays(today(),7)+'">')+'</div>'+
+     fld('Oblasť','f-icat','<select id="f-icat">'+Object.entries(CATS).map(([k,l])=>'<option value="'+k+'">'+l+'</option>').join('')+'</select>')+
+   '</div></details>'+
+   '<div class="actions"><button class="btn primary" type="submit">Uložiť zápis</button><button class="btn" type="button" data-act="close">Zrušiť</button></div></form>';
+}
+const modelsHint=d=>d.modelsChecked?'Neoznačené modely sa zapíšu ako chýbajúce.':'Zatiaľ nekontrolované. Ťukni na modely, ktoré díler má.';
+function sheetPlan(sh){ const p=sh.pre||{};
+  return '<form class="form" data-form="plan" novalidate>'+fld('Díler','p-dealer','<select id="p-dealer" required>'+dealerOptions(p.dealer)+'</select>')+
+   '<div class="two">'+fld('Dátum','p-date','<input id="p-date" type="date" value="'+esc(p.date||today())+'" required>')+fld('Čas','p-time','<input id="p-time" type="time" value="10:00">')+'</div>'+
+   fld('Kto ide','p-who','<select id="p-who">'+ownerOptions(S.me)+'</select>')+
+   fld('Účel','p-purpose','<input id="p-purpose" type="text" maxlength="160" placeholder="Napr. mesačné vyhodnotenie, demo politika">')+
+   '<div class="actions"><button class="btn primary" type="submit">Naplánovať</button><button class="btn" type="button" data-act="close">Zrušiť</button></div></form>';
+}
+function sheetNewIssue(sh){ const p=sh.pre||{};
+  return '<form class="form" data-form="issue" novalidate>'+fld('Díler','i-dealer','<select id="i-dealer" required>'+dealerOptions(p.dealer)+'</select>')+
+   fld('Čo treba vyriešiť','i-title','<input id="i-title" type="text" maxlength="160" required placeholder="Krátky názov problému">')+
+   '<div class="two">'+fld('Oblasť','i-cat','<select id="i-cat">'+Object.entries(CATS).map(([k,l])=>'<option value="'+k+'">'+l+'</option>').join('')+'</select>')+fld('Termín','i-due','<input id="i-due" type="date" value="'+addDays(today(),7)+'">')+'</div>'+
+   fld('Vlastník','i-owner','<select id="i-owner">'+ownerOptions(S.me)+'</select>')+
+   fld('Ďalší krok','i-next','<input id="i-next" type="text" maxlength="200" placeholder="Kto čo urobí ako prvé">')+
+   fld('Popis','i-text','<textarea id="i-text" placeholder="Čo sa stalo, čo díler potrebuje"></textarea>'+micBlock('i-text'))+
+   '<div class="actions"><button class="btn primary" type="submit">Založiť bod</button><button class="btn" type="button" data-act="close">Zrušiť</button></div></form>';
+}
+function sheetIssue(sh){ const raw=S.issues.get(sh.id); if(!raw) return '<p class="empty">Tento bod už neexistuje.</p>'; const i=Object.assign({id:sh.id},raw), closed=i.status==='closed';
+  const log=(i.log||[]).slice().reverse().map(l=>'<li><small>'+fmt(l.on)+' · '+esc(who(l.by,l.byLabel))+'</small>'+esc(l.text)+'</li>').join('');
+  return '<dl class="meta"><dt>Díler</dt><dd>'+esc(dealerName(i.dealer))+'</dd><dt>Oblasť</dt><dd>'+esc(CATS[i.cat]||'Iné')+'</dd><dt>Založené</dt><dd>'+fmt(i.createdOn)+' · pred '+daysAgo(i.createdOn)+' '+(daysAgo(i.createdOn)===1?'dňom':'dňami')+'</dd>'+
+   '<dt>Stav</dt><dd>'+(closed?'<span class="tag t-mute" style="margin:0">uzavreté '+fmt(i.closedOn)+'</span>':'<span class="tag t-'+tone(i)+'" style="margin:0">'+staleText(daysAgo(i.updatedOn))+'</span>'+(overdue(i)?'<span class="tag t-crit">po termíne</span>':''))+exTag(i)+'</dd>'+
+   (closed||!S.canWrite?'<dt>Vlastník</dt><dd>'+esc(who(i.owner,i.ownerLabel))+'</dd><dt>Ďalší krok</dt><dd>'+esc(i.next||'—')+'</dd>':'')+'</dl>'+
+   (closed||!S.canWrite?'':'<form class="form" data-form="issue-update" style="margin-top:14px" novalidate>'+
+     fld('Ďalší krok','u-next','<input id="u-next" type="text" maxlength="200" value="'+esc(i.next||'')+'">')+
+     '<div class="two">'+fld('Vlastník','u-owner','<select id="u-owner">'+ownerOptions(i.owner||'')+'</select>',i.owner?'':(i.ownerLabel?'Teraz: '+esc(i.ownerLabel):''))+fld('Termín','u-due','<input id="u-due" type="date" value="'+esc(i.due||'')+'">')+'</div>'+
+     fld('Čo je nové','u-text','<textarea id="u-text" placeholder="Krátka aktualizácia. Uložením sa vynuluje počítadlo dní bez pohybu."></textarea>'+micBlock('u-text'))+
+     '<div class="actions"><button class="btn primary" type="submit">Uložiť aktualizáciu</button><button class="btn" type="button" data-act="issue-close" data-id="'+esc(i.id)+'">Uzavrieť bod</button></div></form>')+
+   (closed&&S.canWrite?'<div class="actions" style="margin-top:14px"><button class="btn" data-act="issue-reopen" data-id="'+esc(i.id)+'">Znovu otvoriť</button></div>':'')+
+   '<h3>Priebeh</h3>'+(log?'<ul class="log">'+log+'</ul>':'<p class="empty" style="padding:0">Zatiaľ bez záznamov.</p>');
+}
+function sheetVisit(sh){ const raw=S.visits.get(sh.id); if(!raw) return '<p class="empty">Tento záznam už neexistuje.</p>'; const v=Object.assign({id:sh.id},raw), planned=v.status!=='done';
+  let h='<dl class="meta"><dt>Dátum</dt><dd>'+fmt(v.date)+(v.time?' o '+esc(v.time):'')+'</dd><dt>Kto</dt><dd>'+esc(who(v.by,v.byLabel))+exTag(v)+'</dd>'+
+    (planned?'<dt>Účel</dt><dd>'+esc(v.purpose||'—')+'</dd>':'<dt>Forma</dt><dd>'+esc(VTYPE[v.type]||'—')+'</dd>')+'</dl>';
+  if(planned) return h+(S.canWrite?'<div class="actions" style="margin-top:16px"><button class="btn primary" data-act="report-plan" data-id="'+esc(v.id)+'">Zapísať záver</button>'+
+    '<button class="btn danger" data-act="visit-del" data-id="'+esc(v.id)+'">'+(sh.confirmDel?'Naozaj zrušiť?':'Zrušiť návštevu')+'</button></div>':'');
+  h+='<h3>Hodnotenie</h3><div>'+KPIS.map(([k,l])=>'<div class="kv"><span>'+l+'</span>'+(v.kpi&&v.kpi[k]?'<span class="tag t-'+(v.kpi[k]==='bad'?'crit':v.kpi[k])+'" style="margin:0">'+RATING[v.kpi[k]]+'</span>':'<span class="tag t-mute" style="margin:0">nehodnotené</span>')+'</div>').join('')+'</div>';
+  h+='<h3>Modely</h3>'+(Array.isArray(v.models)?modelTags(v.models):'<p class="empty" style="padding:0">Pri tejto návšteve nekontrolované.</p>');
+  h+='<h3>Záver</h3><p style="margin:0;overflow-wrap:anywhere;white-space:pre-wrap">'+(v.note?esc(v.note):'<span style="color:var(--muted)">Bez poznámky.</span>')+'</p>';
+  return h+'<div class="actions" style="margin-top:16px"><button class="btn" data-act="open-dealer" data-id="'+esc(v.dealer)+'">Karta dílera</button></div>';
+}
+function sheetDealer(sh){ const d=DEALER[sh.id]; if(!d) return ''; const lv=lastVisit(d.id), lm=lastModels(d.id);
+  const iss=openIssues().filter(i=>i.dealer===d.id).sort((a,b)=>daysAgo(b.updatedOn)-daysAgo(a.updatedOn));
+  const vs=list('visits').filter(v=>v.dealer===d.id).sort((a,b)=>a.date<b.date?1:-1);
+  return '<dl class="meta"><dt>Zóna</dt><dd>'+ZONES[d.zone]+'</dd><dt>Posledná návšteva</dt><dd>'+(lv?fmt(lv.date)+' · '+ago(daysAgo(lv.date))+' · '+esc(who(lv.by,lv.byLabel)):'zatiaľ bez záznamu')+'</dd></dl>'+
+   (S.canWrite?'<div class="actions" style="margin-top:14px"><button class="btn primary" data-act="new-report" data-dealer="'+d.id+'">+ Zápis z návštevy</button><button class="btn" data-act="new-plan" data-dealer="'+d.id+'">Naplánovať</button><button class="btn" data-act="new-issue" data-dealer="'+d.id+'">Nový bod</button></div>':'')+
+   '<h3>Posledné hodnotenie</h3>'+(lv?'<div>'+KPIS.map(([k,l])=>'<div class="kv"><span>'+l+'</span>'+(lv.kpi&&lv.kpi[k]?'<span class="tag t-'+(lv.kpi[k]==='bad'?'crit':lv.kpi[k])+'" style="margin:0">'+RATING[lv.kpi[k]]+'</span>':'<span class="tag t-mute" style="margin:0">nehodnotené</span>')+'</div>').join('')+'</div>':'<p class="empty" style="padding:0">Zatiaľ bez hodnotenia.</p>')+
+   '<h3>Modely'+(lm?' · kontrola '+fmt(lm.date):'')+'</h3>'+modelTags(lm?lm.models:null)+
+   '<h3>Otvorené body</h3>'+listBox(iss.map(issueRow),'Žiadne otvorené body.')+
+   '<h3>História</h3>'+listBox(vs.map(v=>visitRow(v,true)),'Zatiaľ žiadne návštevy.');
+}
+const SHEETS={report:[sheetReport,()=>'Zápis z návštevy'],plan:[sheetPlan,()=>'Naplánovať návštevu'],newIssue:[sheetNewIssue,()=>'Nový bod'],
+  issue:[sheetIssue,sh=>{const i=S.issues.get(sh.id);return i?i.title:'Bod';}],
+  visit:[sheetVisit,sh=>{const v=S.visits.get(sh.id);return v?dealerName(v.dealer):'Návšteva';}],
+  dealer:[sheetDealer,sh=>dealerName(sh.id)]};
+function renderSheet(){ const root=$('#sheet-root'); if(!S.sheet){ root.innerHTML=''; return; } const def=SHEETS[S.sheet.type];
+  root.innerHTML='<div class="scrim" data-act="scrim"><div class="sheet gutter" role="dialog" aria-modal="true" aria-labelledby="sh-title"><div class="sheet-head"><h2 id="sh-title">'+esc(def[1](S.sheet))+'</h2><button class="x" data-act="close" aria-label="Zavrieť">×</button></div>'+def[0](S.sheet)+'</div></div>';
+  paintMic(); }
+function openSheet(sh){ stopMic(); S.sheet=sh; renderSheet(); const f=$('#sheet-root select, #sheet-root input, #sheet-root textarea'); if(f&&window.matchMedia('(min-width:900px)').matches) f.focus(); }
+function closeSheet(){ stopMic(); S.sheet=null; renderSheet(); }
+function refreshSheet(){ if(!S.sheet||!['issue','visit','dealer'].includes(S.sheet.type)) return;
+  const root=$('#sheet-root'), vals={}, ae=document.activeElement, fid=ae&&root.contains(ae)?ae.id:null, sc=$('.sheet',root)?$('.sheet',root).scrollTop:0;
+  root.querySelectorAll('input[id],textarea[id],select[id]').forEach(el=>{ vals[el.id]=el.value; });
+  renderSheet(); for(const id in vals){ const el=document.getElementById(id); if(el&&(el.tagName!=='SELECT'||[...el.options].some(o=>o.value===vals[id]))) el.value=vals[id]; }
+  if(fid){ const el=document.getElementById(fid); if(el) el.focus(); } if($('.sheet',root)) $('.sheet',root).scrollTop=sc; }
+
+/* ---------- dictation (browser speech recognition, where the browser has it) ---------- */
+function paintMic(){ document.querySelectorAll('.mic').forEach(b=>{ const live=S.micState!=='idle'&&b.dataset.target===S.micTarget; b.classList.toggle('live',live);
+  b.textContent=live?(S.micState==='listening'?'Zastaviť':'Pripájam…'):'Diktovať'; }); }
+function stopMic(){ if(rec){ try{ rec.stop(); }catch(e){} } }
+function refreshSheetForce(){ if(!S.sheet) return; const vals={}; $('#sheet-root').querySelectorAll('input[id],textarea[id],select[id]').forEach(el=>{ vals[el.id]=el.value; });
+  const open=$('#f-isub')&&$('#f-isub').open; renderSheet(); for(const id in vals){ const el=document.getElementById(id); if(el) el.value=vals[id]; } if(open&&$('#f-isub')) $('#f-isub').open=true; }
+function micClick(target){ if(!SR) return; if(rec){ stopMic(); return; }
+  const r=new SR(); r.lang='sk-SK'; r.interimResults=true; r.continuous=!/Android/i.test(navigator.userAgent);
+  S.micTarget=target; rec=r; S.micState='starting'; paintMic();
+  r.onstart=()=>{ S.micState='listening'; paintMic(); };
+  r.onresult=ev=>{ let interim=''; const el=document.getElementById(S.micTarget);
+    for(let k=ev.resultIndex;k<ev.results.length;k++){ const t=ev.results[k][0].transcript;
+      if(ev.results[k].isFinal){ const add=t.trim(); if(el&&add) el.value=el.value?el.value.replace(/\s+$/,'')+' '+add:add; } else interim+=t; }
+    const p=document.querySelector('.partial[data-for="'+S.micTarget+'"]'); if(p) p.textContent=interim; };
+  r.onerror=ev=>{ if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){ S.micOk=false; toast('Mikrofón nie je povolený. Použi mikrofón na klávesnici.'); }
+    else if(ev.error==='language-not-supported'){ S.micOk=false; toast('Tento prehliadač nevie diktovať po slovensky. Použi mikrofón na klávesnici.'); }
+    else if(ev.error==='network') toast('Diktovanie potrebuje pripojenie na internet.'); };
+  r.onend=()=>{ rec=null; S.micState='idle'; document.querySelectorAll('.partial').forEach(p=>{ p.textContent=''; }); if(S.micOk) paintMic(); else refreshSheetForce(); };
+  try{ r.start(); }catch(e){ rec=null; S.micState='idle'; paintMic(); } }
+
+/* ---------- sign-in ---------- */
+function setGate(mode){ if(S.gate===mode) return; S.gate=mode; document.body.classList.toggle('gated',!!mode); $('#gate').hidden=!mode;
+  $('#gate-login').hidden=mode!=='login'; $('#gate-name').hidden=mode!=='name'; if(mode==='name') $('#g-name').focus(); }
+function gateMsg(t,ok){ const el=$('#gate-msg'); el.textContent=t||''; el.classList.toggle('ok',!!ok); }
+const AUTH_ERR={'auth/invalid-credential':'Nesprávny e-mail alebo heslo.','auth/wrong-password':'Nesprávny e-mail alebo heslo.','auth/user-not-found':'Nesprávny e-mail alebo heslo.',
+  'auth/invalid-email':'E-mail nemá správny tvar.','auth/user-disabled':'Tento účet je zablokovaný.','auth/too-many-requests':'Priveľa pokusov. Skús to o pár minút.',
+  'auth/network-request-failed':'Chýba pripojenie na internet.','auth/missing-password':'Zadaj heslo.'};
+function doLogin(form){ const email=$('#g-email').value.trim(), pw=$('#g-pw').value; if(!email||!pw){ gateMsg('Zadaj e-mail aj heslo.'); return; }
+  busy(form,true); gateMsg('');
+  fb.signIn(email,pw).then(()=>{ busy(form,false); $('#g-pw').value=''; },e=>{ busy(form,false); gateMsg(AUTH_ERR[e&&e.code]||'Prihlásenie zlyhalo. Skús to znova.'); }); }
+function doReset(){ const email=$('#g-email').value.trim(); if(!email){ gateMsg('Najprv zadaj svoj e-mail.'); return; }
+  fb.reset(email).then(()=>gateMsg('Ak účet existuje, prišiel naň e-mail s odkazom na zmenu hesla.',true),e=>gateMsg(AUTH_ERR[e&&e.code]||'E-mail sa nepodarilo odoslať.')); }
+function doName(form){ const name=$('#g-name').value.trim().replace(/\s+/g,' '); if(name.length<2){ toast('Napíš svoje meno.'); return; }
+  const cur=S.people.get(S.me)||{}; put('people',S.me,{name,since:cur.since||today()}); }
+
+/* ---------- actions ---------- */
+function newDraft(pre){ return Object.assign({dealer:'',date:today(),type:'visit',kpi:{},models:[],modelsChecked:false,note:'',planId:null},pre||{}); }
+function busy(form,on){ const b=form.querySelector('button[type=submit]'); if(b) b.disabled=on; }
+async function saveReport(form){ const d=S.sheet.draft, dealer=$('#f-dealer').value, date=$('#f-date').value;
+  if(!dealer||!date){ toast('Vyber dílera a dátum.'); return; }
+  const plan=d.planId?S.visits.get(d.planId):null;
+  const doc={dealer,date,time:plan&&plan.time||'',by:S.me||null,status:'done',type:d.type,purpose:plan&&plan.purpose||'',kpi:Object.assign({},d.kpi),
+    models:d.modelsChecked?d.models.slice():null,note:$('#f-note').value.trim(),createdOn:today()};
+  const ititle=$('#f-ititle').value.trim(); busy(form,true);
+  try{ await put('visits',d.planId||nid(),doc);
+    if(ititle){ await put('issues',nid(),{dealer,title:ititle,cat:$('#f-icat').value,owner:$('#f-iowner').value||null,status:'open',createdOn:today(),updatedOn:today(),
+      due:$('#f-idue').value||null,next:'',createdBy:S.me||null,log:[{on:today(),by:S.me||null,text:'Založené pri návšteve '+fmt(date)+'.'}]}); }
+    closeSheet(); toast(ititle?'Zápis aj bod uložené':'Zápis uložený');
+  }catch(e){ busy(form,false); } }
+async function savePlan(form){ const dealer=$('#p-dealer').value, date=$('#p-date').value; if(!dealer||!date){ toast('Vyber dílera a dátum.'); return; } busy(form,true);
+  try{ await put('visits',nid(),{dealer,date,time:$('#p-time').value||'',by:$('#p-who').value||S.me||null,status:'planned',type:'visit',purpose:$('#p-purpose').value.trim(),createdOn:today()});
+    closeSheet(); toast('Návšteva naplánovaná'); }catch(e){ busy(form,false); } }
+async function saveIssue(form){ const dealer=$('#i-dealer').value, title=$('#i-title').value.trim(); if(!dealer||!title){ toast('Vyber dílera a napíš, čo treba vyriešiť.'); return; } busy(form,true);
+  const text=$('#i-text').value.trim();
+  try{ await put('issues',nid(),{dealer,title,cat:$('#i-cat').value,owner:$('#i-owner').value||null,status:'open',createdOn:today(),updatedOn:today(),due:$('#i-due').value||null,
+      next:$('#i-next').value.trim(),createdBy:S.me||null,log:text?[{on:today(),by:S.me||null,text}]:[]});
+    closeSheet(); toast('Bod založený'); }catch(e){ busy(form,false); } }
+async function updateIssue(id,fn,msg){ const cur=S.issues.get(id); if(!cur) return; const doc=clone(cur); fn(doc); doc.updatedOn=today();
+  try{ await put('issues',id,doc); if(msg) toast(msg); }catch(e){} }
+async function saveIssueUpdate(form){ const id=S.sheet.id, text=$('#u-text').value.trim(), next=$('#u-next').value.trim(), owner=$('#u-owner').value, due=$('#u-due').value||null; busy(form,true);
+  await updateIssue(id,doc=>{ doc.next=next; doc.due=due; if(owner){ doc.owner=owner; delete doc.ownerLabel; } else if(!doc.ownerLabel) doc.owner=null;
+    doc.log=doc.log||[]; if(text) doc.log.push({on:today(),by:S.me||null,text}); },'Aktualizácia uložená');
+  const t=$('#u-text'); if(t) t.value=''; const f=$('#sheet-root form'); if(f) busy(f,false); }
+async function removeExamples(){ S.confirmRm=false; const jobs=[]; for(const c of ['visits','issues']) for(const [id,d] of S[c]) if(d.example) jobs.push([c,id]);
+  try{ for(const [c,id] of jobs) await del(c,id); toast('Ukážkové záznamy odstránené'); }catch(e){} render(); }
+
+document.addEventListener('click',ev=>{
+  const el=ev.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act, id=el.dataset.id;
+  if(a==='scrim'){ if(ev.target===el) closeSheet(); return; }
+  if(a==='mic'){ micClick(el.dataset.target); return; }
+  if(a==='go'){ location.hash=el.dataset.r; window.scrollTo(0,0); return; }
+  if(a==='close'){ closeSheet(); return; }
+  if(a==='signout'){ if(fb) fb.signOut(); return; }
+  if(a==='reset-pw'){ doReset(); return; }
+  if(a==='new-report'){ openSheet({type:'report',draft:newDraft({dealer:el.dataset.dealer||''})}); return; }
+  if(a==='report-plan'){ const v=S.visits.get(id); if(v) openSheet({type:'report',draft:newDraft({dealer:v.dealer,date:v.date<=today()?v.date:today(),planId:id})}); return; }
+  if(a==='new-plan'){ openSheet({type:'plan',pre:{dealer:el.dataset.dealer||''}}); return; }
+  if(a==='new-issue'){ openSheet({type:'newIssue',pre:{dealer:el.dataset.dealer||''}}); return; }
+  if(a==='open-issue'){ openSheet({type:'issue',id}); return; }
+  if(a==='open-visit'){ openSheet({type:'visit',id}); return; }
+  if(a==='open-dealer'){ openSheet({type:'dealer',id}); return; }
+  if(a==='ifilter'){ S.issueFilter=el.dataset.f; render(); return; }
+  if(a==='zone'){ S.zone=el.dataset.z; render(); return; }
+  if(a==='week'){ const d=+el.dataset.d; S.weekOffset=d?S.weekOffset+d:0; render(); return; }
+  if(a==='rm-ask'){ S.confirmRm=true; renderNotes(); return; }
+  if(a==='rm-no'){ S.confirmRm=false; renderNotes(); return; }
+  if(a==='rm-yes'){ removeExamples(); return; }
+  if(a==='seg'){ const d=S.sheet&&S.sheet.draft; if(!d) return; const g=el.dataset.group, v=el.dataset.val;
+    if(g==='type') d.type=v; else { const k=g.slice(4); if(d.kpi[k]===v) delete d.kpi[k]; else d.kpi[k]=v; }
+    const cur=g==='type'?d.type:d.kpi[g.slice(4)]; el.parentNode.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.val===cur)));
+    if(g!=='type'&&cur==='bad'&&$('#f-isub')&&!$('#f-ititle').value){ $('#f-isub').open=true; } return; }
+  if(a==='model'||a==='model-all'){ const d=S.sheet&&S.sheet.draft; if(!d) return; d.modelsChecked=true;
+    if(a==='model-all') d.models=MODELS.slice(); else { const m=el.dataset.m; d.models=d.models.includes(m)?d.models.filter(x=>x!==m):d.models.concat(m); }
+    document.querySelectorAll('.models [data-m]').forEach(b=>b.setAttribute('aria-pressed',String(d.models.includes(b.dataset.m)))); $('#f-models-hint').textContent=modelsHint(d); return; }
+  if(a==='issue-close'){ const t=$('#u-text')?$('#u-text').value.trim():''; updateIssue(id,doc=>{ doc.status='closed'; doc.closedOn=today(); doc.log=doc.log||[]; doc.log.push({on:today(),by:S.me||null,text:t?t+' (bod uzavretý)':'Bod uzavretý.'}); },'Bod uzavretý').then(closeSheet); return; }
+  if(a==='issue-reopen'){ updateIssue(id,doc=>{ doc.status='open'; delete doc.closedOn; doc.log=doc.log||[]; doc.log.push({on:today(),by:S.me||null,text:'Bod znovu otvorený.'}); },'Bod znovu otvorený'); return; }
+  if(a==='visit-del'){ if(!S.sheet.confirmDel){ S.sheet.confirmDel=true; renderSheet(); return; } del('visits',id).then(()=>{ closeSheet(); toast('Návšteva zrušená'); },()=>{}); return; }
+});
+document.addEventListener('submit',ev=>{ const f=ev.target.closest('form[data-form]'); if(!f) return; ev.preventDefault();
+  ({report:saveReport,plan:savePlan,issue:saveIssue,'issue-update':saveIssueUpdate,login:doLogin,name:doName})[f.dataset.form](f); });
+document.addEventListener('input',ev=>{ if(ev.target.id==='q'){ S.q=ev.target.value; $('#dealer-list').innerHTML=dealerRows(); } });
+document.addEventListener('keydown',ev=>{ if(ev.key==='Escape'&&S.sheet) closeSheet(); });
+window.addEventListener('hashchange',render);
+
+/* ---------- boot ---------- */
+function goLocal(loadError){ S.mode='local'; S.me='local'; S.loadError=!!loadError; loadLocal(); onData(); }
+async function boot(){
+  render();
+  const cfg=window.FIREBASE_CONFIG;
+  if(!cfg||!cfg.apiKey){ goLocal(false); return; }
+  try{
+    const [A,U,F]=await Promise.all([import(FB_BASE+'firebase-app.js'),import(FB_BASE+'firebase-auth.js'),import(FB_BASE+'firebase-firestore.js')]);
+    const app=A.initializeApp(cfg), auth=U.getAuth(app); let db;
+    try{ db=F.initializeFirestore(app,{localCache:F.persistentLocalCache({tabManager:F.persistentMultipleTabManager()})}); }catch(e){ db=F.getFirestore(app); }
+    fb={ signIn:(e,p)=>U.signInWithEmailAndPassword(auth,e,p), signOut:()=>U.signOut(auth), reset:e=>U.sendPasswordResetEmail(auth,e),
+      listen:(c,next,err)=>F.onSnapshot(F.collection(db,c),next,err), set:(c,id,data)=>F.setDoc(F.doc(db,c,id),data), del:(c,id)=>F.deleteDoc(F.doc(db,c,id)) };
+    U.onAuthStateChanged(auth,u=>{
+      if(S.unsubs){ S.unsubs.forEach(f=>{ try{ f(); }catch(e){} }); S.unsubs=null; }
+      S.visits=new Map(); S.issues=new Map(); S.people=new Map(); S.loaded={visits:false,issues:false}; S.peopleLoaded=false; S.denied=false;
+      if(!u){ S.me=null; S.mode='loading'; if(S.sheet) closeSheet(); setGate('login'); render(); return; }
+      S.me=u.uid; S.mode='shared'; setGate(null); subscribe(); onData();
+    });
+  }catch(e){ goLocal(true); }
+}
+boot();
+})();
+</script>
+</body>
+</html>
